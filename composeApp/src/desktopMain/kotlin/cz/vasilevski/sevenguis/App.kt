@@ -1,7 +1,5 @@
 package cz.vasilevski.sevenguis
 
-import androidx.compose.animation.AnimatedVisibility
-import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -16,12 +14,17 @@ import androidx.compose.material.Card
 import androidx.compose.material.Divider
 import androidx.compose.material.DropdownMenu
 import androidx.compose.material.DropdownMenuItem
+import androidx.compose.material.LinearProgressIndicator
 import androidx.compose.material.MaterialTheme
+import androidx.compose.material.Slider
 import androidx.compose.material.Text
 import androidx.compose.material.TextButton
 import androidx.compose.material.TextField
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.remember
@@ -29,10 +32,11 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
-import org.jetbrains.compose.resources.painterResource
+import kotlin.math.min
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.MutableSharedFlow
+import kotlinx.coroutines.flow.flow
 import org.jetbrains.compose.ui.tooling.preview.Preview
-import sevenguis.composeapp.generated.resources.Res
-import sevenguis.composeapp.generated.resources.compose_multiplatform
 
 enum class Tabs(val text: String) {
     Counter("Counter"),
@@ -93,7 +97,7 @@ fun App() {
                     Tabs.Counter -> CounterProblem()
                     Tabs.TemperatureConverter -> TemperatureConverterProblem()
                     Tabs.FlightBooker -> FlightBookerProblem()
-                    Tabs.Timer -> TimerProblem()
+                    Tabs.Timer -> TimerProblemWithHotFlow()
                     Tabs.CRUD -> CRUDProblem()
                     Tabs.CircleDrawer -> CircleDrawerProblem()
                     Tabs.Cells -> CellsProblem()
@@ -213,7 +217,168 @@ fun FlightBookerProblem() {
 
 @Composable
 fun TimerProblem() {
-    Text("Timer Problem Content")
+    var elapsedTime by remember { mutableFloatStateOf(0f) }
+    var duration by remember { mutableFloatStateOf(30f) }
+    var isRunning by remember { mutableStateOf(true) }
+
+    LaunchedEffect(isRunning) {
+        while (isRunning) {
+            delay(10)
+            if (elapsedTime < duration) {
+                elapsedTime += 0.01f
+            } else {
+                isRunning = false
+            }
+        }
+    }
+
+    Column {
+        LinearProgressIndicator(
+            progress = min(elapsedTime / duration, 1f),
+        )
+
+
+        Slider(
+            value = duration,
+            valueRange = 1f..60f,
+//            steps = 60 * 10 - 1, // meaning 0.1 s step
+            onValueChange = {
+                duration = it
+                if (elapsedTime < duration && !isRunning) {
+                    isRunning = true
+                }
+            }
+        )
+        Text(text = duration.toString())
+
+        Divider()
+
+        Button(
+            onClick = {
+                elapsedTime = 0f
+                isRunning = true
+            },
+            content = { Text("Reset") }
+        )
+    }
+}
+
+@Composable
+// reset doesn't restart the countdown, only after I move the slider things start moving again
+fun TimerProblemWithFlow() {
+    var duration by remember { mutableFloatStateOf(30f) }
+    var isRunning by remember { mutableStateOf(true) }
+    var resetTrigger by remember { mutableStateOf(0) } // Add this
+
+    // Create timer flow
+    val timerFlow =  remember(resetTrigger) {
+        flow {
+            var elapsedTime = 0f
+            while (true) {
+                emit(elapsedTime)
+                delay(100) // 100ms tick
+                if (isRunning && elapsedTime < duration) {
+                    elapsedTime += 0.1f
+                } else if (elapsedTime >= duration) {
+                    isRunning = false
+                }
+            }
+        }
+    }
+
+    // Collect the flow as state
+    val elapsedTime by timerFlow.collectAsState(initial = 0f)
+
+    Column {
+        LinearProgressIndicator(
+            progress = min(elapsedTime / duration, 1f),
+        )
+
+
+        Slider(
+            value = duration,
+            valueRange = 1f..60f,
+//            steps = 60 * 10 - 1, // meaning 0.1 s step
+            onValueChange = {
+                duration = it
+                if (elapsedTime < duration && !isRunning) {
+                    isRunning = true
+                }
+            }
+        )
+        Text(text = duration.toString())
+
+        Divider()
+
+        Button(
+            onClick = {
+                resetTrigger += 1
+                isRunning = true
+            },
+            content = { Text("Reset") }
+        )
+    }
+}
+
+@Composable
+// works but is ugly?
+fun TimerProblemWithHotFlow() {
+    var duration by remember { mutableFloatStateOf(30f) }
+    var isRunning by remember { mutableStateOf(true) }
+
+    val timerFlow = remember {
+        MutableSharedFlow<Float>(replay = 1).apply {
+            tryEmit(0f)  // Initial value
+        }
+    }
+
+    // Keep track of elapsed time outside the LaunchedEffect
+    val elapsedTimeRef = remember { mutableStateOf(0f) }
+
+    // Start the timer effect
+    LaunchedEffect(Unit) {
+        while (true) {
+            timerFlow.emit(elapsedTimeRef.value)
+            delay(100)
+            if (isRunning && elapsedTimeRef.value < duration) {
+                elapsedTimeRef.value += 0.1f
+            } else if (elapsedTimeRef.value >= duration) {
+                isRunning = false
+            }
+        }
+    }
+
+    val elapsedTime by timerFlow.collectAsState(initial = 0f)
+
+    Column {
+        LinearProgressIndicator(
+            progress = min(elapsedTime / duration, 1f),
+        )
+
+
+        Slider(
+            value = duration,
+            valueRange = 1f..60f,
+//            steps = 60 * 10 - 1, // meaning 0.1 s step
+            onValueChange = {
+                duration = it
+                if (elapsedTime < duration && !isRunning) {
+                    isRunning = true
+                }
+            }
+        )
+        Text(text = duration.toString())
+
+        Divider()
+
+        Button(
+            onClick = {
+                elapsedTimeRef.value = 0f
+                isRunning = true
+            },
+            content = { Text("Reset") }
+        )
+    }
 }
 
 @Composable
