@@ -14,6 +14,8 @@ import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.Button
 import androidx.compose.material.Card
 import androidx.compose.material.Divider
+import androidx.compose.material.DropdownMenu
+import androidx.compose.material.DropdownMenuItem
 import androidx.compose.material.MaterialTheme
 import androidx.compose.material.Text
 import androidx.compose.material.TextButton
@@ -151,9 +153,62 @@ fun celsius2fahrenheit(celsius: Double): Double = (celsius * 9/5) + 32
 
 fun fahrenheit2celsius(fahrenheit: Double): Double = (fahrenheit - 32) * 5/9
 
+enum class FlightType(val text: String) {
+    OneWay("One-way"),
+    Return("return"),
+}
+
 @Composable
 fun FlightBookerProblem() {
-    Text("Flight Booker Problem Content")
+    var flightType: FlightType by remember { mutableStateOf(FlightType.OneWay) }
+    var departureDate: String by remember { mutableStateOf("01.01.2025") }
+    var returnDate: String? by remember { mutableStateOf(null) }
+
+    var expanded by remember { mutableStateOf(false) }
+    val dropdownOptions = FlightType.entries
+
+    Column {
+        Box {
+            Button(onClick = { expanded = true }) {
+                Text(flightType.text)
+            }
+
+            DropdownMenu(
+                expanded = expanded,
+                onDismissRequest = { expanded = false }
+            ) {
+                dropdownOptions.forEach { option ->
+                    DropdownMenuItem(
+                        onClick = {
+                            flightType = option
+                            expanded = false
+                        }
+                    ) {
+                        Text(option.text)
+                    }
+                }
+            }
+        }
+
+        Divider()
+
+        TextField(
+            value = departureDate,
+            onValueChange = { departureDate = it },
+            label = { Text("Departure Date") },
+        )
+
+        Divider()
+
+//        AnimatedVisibility(flightType == FlightType.Return) {
+            TextField(
+                value = returnDate.orEmpty(),
+                onValueChange = { returnDate = it },
+                label = { Text("Return Date") },
+                enabled = flightType == FlightType.Return,
+            )
+//        }
+    }
 }
 
 @Composable
