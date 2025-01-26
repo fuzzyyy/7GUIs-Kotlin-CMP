@@ -1,5 +1,7 @@
 package cz.vasilevski.sevenguis
 
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -8,19 +10,27 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.material.Button
 import androidx.compose.material.Card
 import androidx.compose.material.Divider
 import androidx.compose.material.MaterialTheme
 import androidx.compose.material.Text
 import androidx.compose.material.TextButton
+import androidx.compose.material.TextField
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.remember
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
+import org.jetbrains.compose.resources.painterResource
 import org.jetbrains.compose.ui.tooling.preview.Preview
+import sevenguis.composeapp.generated.resources.Res
+import sevenguis.composeapp.generated.resources.compose_multiplatform
 
 enum class Tabs(val text: String) {
     Counter("Counter"),
@@ -93,13 +103,53 @@ fun App() {
 
 @Composable
 fun CounterProblem() {
-    Text("Counter Problem Content")
+    var count by remember { mutableStateOf(0) }
+
+    Column(Modifier.fillMaxWidth(), horizontalAlignment = Alignment.CenterHorizontally) {
+        Text("Counter count: $count")
+        Button(onClick = {
+            count++
+        }, content = {
+            Text("Click to increment")
+        })
+    }
 }
 
 @Composable
 fun TemperatureConverterProblem() {
-    Text("Temperature Converter Problem Content")
+    var celsius by remember { mutableStateOf(0.0) }
+    var fahrenheit by remember { mutableStateOf(celsius2fahrenheit(celsius)) }
+
+    Column {
+        TextField(
+            value = celsius.toString(),
+            onValueChange = {
+                celsius = it.toDouble()
+                fahrenheit = celsius2fahrenheit(it.toDouble())
+            },
+            keyboardOptions = KeyboardOptions(
+                keyboardType = KeyboardType.Number,
+            ),
+            label = { Text("Celsius") },
+        )
+        Divider()
+        TextField(
+            value = fahrenheit.toString(),
+            onValueChange = {
+                fahrenheit = it.toDouble()
+                celsius = fahrenheit2celsius(it.toDouble())
+            },
+            keyboardOptions = KeyboardOptions(
+                keyboardType = KeyboardType.Number,
+            ),
+            label = { Text("Fahrenheit") },
+        )
+    }
 }
+
+fun celsius2fahrenheit(celsius: Double): Double = (celsius * 9/5) + 32
+
+fun fahrenheit2celsius(fahrenheit: Double): Double = (fahrenheit - 32) * 5/9
 
 @Composable
 fun FlightBookerProblem() {
