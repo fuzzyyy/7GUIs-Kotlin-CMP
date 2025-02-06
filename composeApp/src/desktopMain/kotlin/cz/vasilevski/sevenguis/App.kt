@@ -32,10 +32,17 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.ViewModel
+import androidx.lifecycle.viewmodel.compose.viewModel
+import java.util.LinkedList
 import kotlin.math.min
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableSharedFlow
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.flow
+import kotlinx.coroutines.flow.update
 import org.jetbrains.compose.ui.tooling.preview.Preview
 
 enum class Tabs(val text: String) {
@@ -381,9 +388,47 @@ fun TimerProblemWithHotFlow() {
     }
 }
 
+data class Name(
+    val firstName: String,
+    val lastName: String,
+) : Comparable<Name> {
+    override fun compareTo(other: Name): Int {
+        val lastNameComparison = lastName.compareTo(other.lastName)
+
+        return if (lastNameComparison == 0) {
+            firstName.compareTo(other.firstName)
+        } else {
+            lastNameComparison
+        }
+    }}
+
+data class CrudState(
+    val names: List<Name>,
+)
+
+class CrudViewModel : ViewModel() {
+    private val _uiState = MutableStateFlow(CrudState(emptyList()))
+    val uiState: StateFlow<CrudState> = _uiState.asStateFlow()
+
+    fun addName(name: Name) {
+        _uiState.update { currentState ->
+            currentState.copy(
+                names = (currentState.names + name).sorted()
+            )
+        }
+    }
+}
+
 @Composable
 fun CRUDProblem() {
-    Text("CRUD Problem Content")
+
+}
+
+@Composable
+fun CRUDProblemView(
+    viewModel: CrudViewModel = viewModel { CrudViewModel() },
+) {
+    val uiState by viewModel.uiState.collectAsState()
 }
 
 @Composable
